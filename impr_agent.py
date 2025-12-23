@@ -3,19 +3,19 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
-import yfinance as yf  # 务必确保安装：pip install yfinance
+import yfinance as yf  
 
-# --- 1. 页面配置 ---
-st.set_page_config(page_title="DRL 算法交易智能体", page_icon="🤖", layout="wide")
+#  1. 页面配置 
+st.set_page_config(page_title="算法交易智能体", page_icon="🤖", layout="wide")
 
-# --- 2. 核心类定义 ---
+#  2. 核心类 
 
 class StockEnvironment:
     """
     模拟股票市场环境 (MDP)。
-    状态 (State): [过去 N 天的价格变化率, 持仓状态, 偏差项]
-    动作 (Action): 0=持有, 1=买入, 2=卖出
-    奖励 (Reward): 净值增长 + 交易成本惩罚
+    状态 : [过去 N 天的价格变化率, 持仓状态, 偏差项]
+    动作 : 0=持有, 1=买入, 2=卖出
+    奖励 : 净值增长 + 交易成本惩罚
     """
     def __init__(self, data, initial_balance=10000):
         self.data = data
@@ -91,7 +91,7 @@ class StockEnvironment:
 class SimpleQNetwork:
     """
     简单的 Q-Learning 线性决策器。
-    为了 CV 的 'Interpretability' (可解释性)，我们使用线性近似而非黑盒神经网络。
+    为了 CV 的 可解释性，我使用线性近似而非神经网络。
     """
     def __init__(self, state_size, action_size):
         self.weights = np.random.rand(state_size, action_size) - 0.5
@@ -115,13 +115,13 @@ class SimpleQNetwork:
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
 
-# --- 3. 数据获取 (改用真实数据) ---
+# 3. 数据获取 (改用真实数据) 
 
 @st.cache_data
 def get_real_stock_data(ticker="NVDA", start="2021-01-01", end="2021-06-01"):
     """
     获取真实美股数据。
-    这里默认选用 NVDA (英伟达) 2021年上半年的数据，因为这段时间有波动且趋势向上，
+    这里默认选用 NVDA 2021年上半年的数据，因为这段时间有波动且趋势向上，
     容易训练出好看的结果。
     """
     try:
@@ -130,7 +130,7 @@ def get_real_stock_data(ticker="NVDA", start="2021-01-01", end="2021-06-01"):
             return pd.DataFrame()
         
         df = df.reset_index()
-        # 处理 MultiIndex 列名问题 (yfinance 新版特性)
+        # 处理 MultiIndex 列名问题 
         if isinstance(df.columns, pd.MultiIndex):
              df.columns = df.columns.get_level_values(0)
              
@@ -143,11 +143,10 @@ def get_real_stock_data(ticker="NVDA", start="2021-01-01", end="2021-06-01"):
         st.error(f"数据下载失败: {e}")
         return pd.DataFrame()
 
-# --- 4. UI 主逻辑 ---
+# 4. UI 
 
 st.title("🤖 Reinforcement Learning Quantitative Trader")
 st.markdown("""
-**HKU/HKUST/CUHK 申请项目演示**
 * **核心技术:** Reinforcement Learning (Q-Learning), MDP, Quantitative Analysis
 * **数据源:** Real Market Data (Yahoo Finance)
 """)
@@ -163,7 +162,7 @@ with col1:
     
     st.info("""
     **训练原理:**
-    Agent 在历史数据中反复尝试 (Trial-and-Error)，
+    Agent 在历史数据中Trial-and-Error，
     学习在什么波动率下买入能获得最大**长期净值**。
     """)
 
@@ -213,11 +212,11 @@ if train_btn:
         
         st.success(f"训练完成！耗时 {time.time() - start_time:.2f} 秒")
 
-        # --- 5. 结果可视化与 CV 指标计算 ---
+        # 5. 结果可视化与指标计算 
         history_df = pd.DataFrame(final_history)
         
         # A. 核心图表
-        st.subheader("1. 交易决策可视化 (Trading Decisions)")
+        st.subheader("1. 交易决策可视化 ")
         fig = go.Figure()
         
         # 股价
@@ -238,7 +237,7 @@ if train_btn:
         st.plotly_chart(fig, use_container_width=True)
         
         # B. 资金曲线对比
-        st.subheader("2. 策略绩效对比 (Strategy vs. Benchmark)")
+        st.subheader("2. 策略绩效对比")
         
         # 计算基准 (Buy & Hold)
         initial_price = history_df.iloc[0]['price']
@@ -255,8 +254,8 @@ if train_btn:
         fig2.update_layout(yaxis_title="Net Worth ($)")
         st.plotly_chart(fig2, use_container_width=True)
         
-        # C. 关键金融指标 (CV 素材)
-        st.subheader("3. 关键量化指标 (Key Metrics for CV)")
+        # C. 关键金融指标 
+        st.subheader("3. 关键量化指标")
         
         # 计算收益率
         history_df['pct_change'] = history_df['net_worth'].pct_change().fillna(0)
@@ -268,7 +267,7 @@ if train_btn:
         # 2. Alpha (超额收益)
         alpha = total_return - benchmark_return
         
-        # 3. 夏普比率 (Sharpe Ratio)
+        # 3. 夏普比率
         # 假设无风险利率 2%，按 252 个交易日年化
         risk_free_rate = 0.02
         daily_rf = risk_free_rate / 252
@@ -278,12 +277,12 @@ if train_btn:
             sharpe_ratio = np.mean(excess_returns) / np.std(excess_returns) * np.sqrt(252)
             
         k1, k2, k3 = st.columns(3)
-        k1.metric("累计收益 (Total Return)", f"{total_return*100:.1f}%", delta=f"vs Benchmark {benchmark_return*100:.1f}%")
-        k2.metric("夏普比率 (Sharpe Ratio)", f"{sharpe_ratio:.2f}", help=">1.0 通常被认为是优秀的")
+        k1.metric("累计收益", f"{total_return*100:.1f}%", delta=f"vs Benchmark {benchmark_return*100:.1f}%")
+        k2.metric("夏普比率", f"{sharpe_ratio:.2f}", help=">1.0 通常被认为是优秀的")
         k3.metric("Alpha (超额收益)", f"{alpha*100:.1f}%", delta="CV Key Metric")
         
         st.success(f"""
-        ✅ **CV 写作建议**: 
+        ✅ **写作建议**: 
         "Backtested on {ticker} historical data (2021), the RL agent achieved a **Sharpe Ratio of {sharpe_ratio:.2f}**, 
         generating a **{total_return*100:.1f}% cumulative return** and outperforming the benchmark by **{alpha*100:.1f}%** (Alpha)."
         """)
